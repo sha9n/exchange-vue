@@ -4,19 +4,24 @@
     <div v-if="loading" class="loader">Loading...</div>
     <div v-else>
       <div v-if="error" class="error-message" style="color: red">Error loading data</div>
-      <div v-else>
-        <select v-model="selectedCurrency" :disabled="loading" @change="convertCurrency">
-          <option v-for="(value, key) in currencies" :key="key" :value="key">
-            {{ key }} ({{ value.Name }})
-          </option>
-        </select>
-        <input type="number" v-model="inputAmount" :disabled="loading" @input="convertCurrency" />
-        <input type="text" v-model="outputAmount" :disabled="true" />
+      <div v-else class="converter">
+        <div class="input-container">
+          <input type="number" v-model="inputAmount" :disabled="loading" @input="convertCurrency" />
+        </div>
+        <div class="select-container">
+          <select v-model="selectedCurrency" :disabled="loading" @change="convertCurrency">
+            <option v-for="(value, key) in currencies" :key="key" :value="key">
+              {{ key }} ({{ value.Name }})
+            </option>
+          </select>
+        </div>
+        <div class="output-container">
+          <input type="text" v-model="outputAmount" :disabled="true"/>
+        </div>
       </div>
     </div>
   </div>
 </template>
-
 <script>
 export default {
   data() {
@@ -31,24 +36,29 @@ export default {
     };
   },
   mounted() {
-    this.loadCurrencies();
+  this.fetchCurrencies();
+},
+
+methods: {
+  fetchCurrencies() {
+    fetch(this.apiUrl)
+      .then((response) => response.json())
+      .then((data) => {
+        this.currencies = data.Valute;
+        const savedCurrency = localStorage.getItem("selectedCurrency");
+        if (savedCurrency && this.currencies[savedCurrency]) {
+          this.selectedCurrency = savedCurrency;
+        } else {
+          this.selectedCurrency = Object.keys(this.currencies)[0];
+        }
+        this.loading = false;
+        this.convertCurrency();
+      })
+      .catch(() => {
+        this.loading = false;
+        this.error = true;
+      });
   },
-  methods: {
-    loadCurrencies() {
-      fetch(this.apiUrl)
-        .then((response) => response.json())
-        .then((data) => {
-          this.loading = false;
-          this.currencies = data.Valute;
-          const savedCurrency = localStorage.getItem("selectedCurrency");
-          if (savedCurrency && this.currencies[savedCurrency]) {
-            this.selectedCurrency = savedCurrency;
-          } else {
-            this.selectedCurrency = Object.keys(this.currencies)[0];
-          }
-          this.convertCurrency();
-        })
-    },
     convertCurrency() {
       localStorage.setItem("selectedCurrency", this.selectedCurrency);
       const rate = this.currencies[this.selectedCurrency].Value;
@@ -58,7 +68,9 @@ export default {
       } else {
         this.outputAmount = "";
       }
+      
     },
+    
   },
 };
 </script>
@@ -145,4 +157,28 @@ input[type="input"] {
   background-position: 0% 50%;
   }
 }
+
+.converter {
+    flex-direction: row;
+    align-items: center;
+  }
+  
+  .select-container {
+    flex: 1;
+  }
+  
+input[type="number"],
+input[type="text"] {
+  width: 100%;
+  max-width: 500px;
+  height: 23px;
+  padding: 10px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+  font-size: 24px;
+  margin-bottom: 10px;
+}
+
+
+
 </style>
